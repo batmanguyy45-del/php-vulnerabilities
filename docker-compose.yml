@@ -1,0 +1,32 @@
+services:
+  php-pre-november-fix:
+    image: php:8.5.12-fpm-alpine
+    profiles: ["baseline"]
+    expose:
+      - "9000"
+    networks: [lab]
+    restart: "no"
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+
+  php-november-fixed:
+    image: php:8.5.13-fpm-alpine
+    profiles: ["baseline"]
+    expose:
+      - "9000"
+    networks: [lab]
+    restart: "no"
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+
+networks:
+  lab:
+    internal: true
