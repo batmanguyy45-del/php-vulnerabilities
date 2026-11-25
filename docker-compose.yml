@@ -143,6 +143,96 @@ services:
       - no-new-privileges:true
     cap_drop: ["ALL"]
 
+
+  session-mismatch-vulnerable:
+    image: php:8.5.12-fpm-alpine
+    profiles: ["session-mismatch-lab"]
+    expose: ["9000"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-115560/lab:/var/www/html:ro
+      - ./vulnerabilities/CVE-2026-115560/lab/vulnerable.ini:/usr/local/etc/php/conf.d/99-session-mismatch.ini:ro
+      - ./artifacts/cve-2026-115560/vulnerable:/sessions
+    networks: [lab]
+    init: true
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    cap_add: ["SETUID", "SETGID"]
+
+  session-mismatch-patched:
+    image: php:8.5.13-fpm-alpine
+    profiles: ["session-mismatch-lab"]
+    expose: ["9000"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-115560/lab:/var/www/html:ro
+      - ./vulnerabilities/CVE-2026-115560/lab/patched.ini:/usr/local/etc/php/conf.d/99-session-mismatch.ini:ro
+      - ./artifacts/cve-2026-115560/patched:/sessions
+    networks: [lab]
+    init: true
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    cap_add: ["SETUID", "SETGID"]
+
+  session-mismatch-nginx:
+    image: nginx:1.28-alpine
+    profiles: ["session-mismatch-lab"]
+    depends_on:
+      - session-mismatch-vulnerable
+      - session-mismatch-patched
+    expose: ["8080", "8081"]
+    volumes:
+      - ./nginx/session-mismatch.conf:/etc/nginx/nginx.conf:ro
+    networks: [lab]
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    cap_add: ["SETUID", "SETGID", "CHOWN"]
+
+  session-mismatch-probe:
+    image: python:3.12-alpine
+    profiles: ["session-mismatch-lab"]
+    entrypoint: ["python3", "-B"]
+    command: ["/lab/cve_2026_115560_probe.py"]
+    working_dir: /lab
+    volumes:
+      - ./poc:/lab:ro
+    networks: [lab]
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 32
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+
 networks:
   lab:
     internal: true
