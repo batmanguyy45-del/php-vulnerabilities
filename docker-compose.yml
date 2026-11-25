@@ -1,3 +1,47 @@
+x-fatal-backtrace-fpm: &fatal-backtrace-fpm
+  profiles: ["fatal-backtrace-lab"]
+  expose: ["9000"]
+  command:
+    - php-fpm
+    - -n
+    - -y
+    - /usr/local/etc/php-fpm.conf
+    - -O
+    - -F
+    - -c
+    - /var/www/html/php.ini
+    - -d
+    - fatal_error_backtraces=1
+    - -d
+    - display_errors=0
+    - -d
+    - log_errors=1
+    - -d
+    - error_log=/proc/self/fd/2
+    - -d
+    - date.timezone=UTC
+    - -d
+    - max_memory_limit=8M
+    - -d
+    - memory_limit=8M
+    - -d
+    - zlib.output_compression=1
+  volumes:
+    - ./vulnerabilities/CVE-2026-129182/lab:/var/www/html:ro
+    - ./vulnerabilities/CVE-2026-129182/lab/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+  networks: [lab]
+  init: true
+  restart: "no"
+  read_only: true
+  tmpfs: ["/tmp", "/var/run"]
+  mem_limit: 256m
+  cpus: 0.75
+  pids_limit: 64
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: ["ALL"]
+  cap_add: ["SETUID", "SETGID"]
+
 services:
   php-pre-november-fix:
     image: php:8.5.12-fpm-alpine
@@ -226,6 +270,32 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 32
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+
+  fatal-backtrace-vulnerable:
+    <<: *fatal-backtrace-fpm
+    image: php:8.5.12-fpm-alpine
+
+  fatal-backtrace-patched:
+    <<: *fatal-backtrace-fpm
+    image: php:8.5.13-fpm-alpine
+
+  fatal-backtrace-probe:
+    image: python:3.12-alpine
+    profiles: ["fatal-backtrace-lab"]
+    entrypoint: ["python3", "-B"]
+    command: ["/lab/cve_2026_129182_probe.py"]
+    working_dir: /lab
+    volumes:
+      - ./poc:/lab:ro
+    networks: [lab]
+    read_only: true
+    tmpfs: ["/tmp"]
     mem_limit: 128m
     cpus: 0.5
     pids_limit: 32
