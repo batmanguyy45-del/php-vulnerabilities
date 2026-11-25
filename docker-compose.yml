@@ -96,6 +96,53 @@ services:
     security_opt:
       - no-new-privileges:true
 
+
+  session-vulnerable:
+    build:
+      context: ./vulnerabilities/CVE-2026-126714/lab
+      args:
+        PHP_IMAGE: php:8.5.12-cli-alpine
+    image: php-session-lab:8.5.12
+    profiles: ["session-lab"]
+    entrypoint: ["php"]
+    command: ["-v"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-126714/lab:/lab:ro
+      - ./artifacts/cve-2026-126714/vulnerable:/sessions
+    networks: [lab]
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 32
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+
+  session-patched:
+    build:
+      context: ./vulnerabilities/CVE-2026-126714/lab
+      args:
+        PHP_IMAGE: php:8.5.13-cli-alpine
+    image: php-session-lab:8.5.13
+    profiles: ["session-lab"]
+    entrypoint: ["php"]
+    command: ["-v"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-126714/lab:/lab:ro
+      - ./artifacts/cve-2026-126714/patched:/sessions
+    networks: [lab]
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 32
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+
 networks:
   lab:
     internal: true
