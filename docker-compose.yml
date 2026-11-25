@@ -1,31 +1,100 @@
 services:
   php-pre-november-fix:
     image: php:8.5.12-fpm-alpine
-    profiles: ["baseline"]
-    expose:
-      - "9000"
+    profiles: ["baseline", "fpm-lab", "http-lab"]
+    expose: ["9000"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-129289/lab:/var/www/html:ro
+      - ./vulnerabilities/CVE-2026-129289/lab/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro
     networks: [lab]
+    init: true
     restart: "no"
-    mem_limit: 512m
-    cpus: 1.0
-    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    cap_add: ["SETUID", "SETGID"]
+
+  php-november-fixed:
+    image: php:8.5.13-fpm-alpine
+    profiles: ["baseline", "fpm-lab", "http-lab"]
+    expose: ["9000"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-129289/lab:/var/www/html:ro
+      - ./vulnerabilities/CVE-2026-129289/lab/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+    networks: [lab]
+    init: true
+    restart: "no"
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    cap_add: ["SETUID", "SETGID"]
+
+  php-old-mitigated:
+    image: php:8.5.12-fpm-alpine
+    profiles: ["http-lab"]
+    expose: ["9000"]
+    volumes:
+      - ./vulnerabilities/CVE-2026-129289/lab:/var/www/html:ro
+      - ./vulnerabilities/CVE-2026-129289/lab/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+    networks: [lab]
+    init: true
+    restart: "no"
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    cap_add: ["SETUID", "SETGID"]
+
+  fpm-poc-runner:
+    image: python:3.12-alpine
+    profiles: ["fpm-lab", "http-lab"]
+    entrypoint: ["python3"]
+    command: ["-c", "print('PHP research runner ready')"]
+    working_dir: /lab
+    volumes:
+      - .:/lab:ro
+    networks: [lab]
+    depends_on:
+      - php-pre-november-fix
+      - php-november-fixed
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
     security_opt:
       - no-new-privileges:true
     cap_drop: ["ALL"]
 
-  php-november-fixed:
-    image: php:8.5.13-fpm-alpine
-    profiles: ["baseline"]
+  nginx-http-lab:
+    image: nginx:1.28-alpine
+    profiles: ["http-lab"]
+    depends_on:
+      - php-pre-november-fix
+      - php-november-fixed
+      - php-old-mitigated
     expose:
-      - "9000"
+      - "8080"
+      - "8081"
+      - "8082"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks: [lab]
     restart: "no"
-    mem_limit: 512m
-    cpus: 1.0
-    pids_limit: 128
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
     security_opt:
       - no-new-privileges:true
-    cap_drop: ["ALL"]
 
 networks:
   lab:
